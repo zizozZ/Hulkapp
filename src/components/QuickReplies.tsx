@@ -206,7 +206,7 @@ export const QuickReplies: React.FC<{ clients?: TraineeProfile[] }> = ({ clients
 
     try {
       await addDoc(collection(db, 'whatsappQueue'), {
-        trainerId: (selectedClient as any)?.trainerId || profile.id,
+        trainerId: profile.id,
         traineeId: selectedClient.id,
         traineeName: selectedClient.fullName || 'متدرب',
         toPhone: cleanPhone,
