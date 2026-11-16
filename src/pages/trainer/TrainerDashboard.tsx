@@ -14,6 +14,7 @@ import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recha
 import { db } from '../../config/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { Conversation, TraineeProfile } from '../../types';
+import { QuickReplies } from '../../components/QuickReplies';
 import {
   computeComplianceLevel,
   getComplianceBadgeMeta,
@@ -207,6 +208,9 @@ export const TrainerDashboard: React.FC = () => {
             </ResponsiveContainer>
           </div>
         </div>
+
+      {/* Quick Replies WhatsApp Section */}
+      <QuickReplies clients={trainees} />
       </div>
     </div>
   );
