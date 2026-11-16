@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Send, Search, Zap } from 'lucide-react';
-import { db } from '../config/firebase';
 import { TraineeProfile } from '../types';
+import { sendWhatsAppNotificationFn } from '../services/functionsService';
 
 const REPLY_CATEGORIES: Record<string, { label: string; templates: string[] }> = {
   motivation: {
@@ -180,8 +179,8 @@ export const QuickReplies: React.FC<{ clients?: TraineeProfile[] }> = ({ clients
   };
 
   const handleSendWhatsApp = async () => {
-    const phone = (selectedClient as any)?.phone || (selectedClient as any)?.whatsapp;
-    if (!selectedClient || !phone) {
+    const rawPhone = (selectedClient as any)?.phone || (selectedClient as any)?.whatsapp || '';
+    if (!selectedClient || !rawPhone) {
       setStatus({ type: 'error', text: 'يرجى اختيار متدرب مسجل برقم واتساب صحيح!' });
       return;
     }
@@ -190,23 +189,28 @@ export const QuickReplies: React.FC<{ clients?: TraineeProfile[] }> = ({ clients
       return;
     }
 
+    // تنسيق الرقم المصري تلقائياً (مثلاً 010... يتحول إلى 2010...)
+    let cleanPhone = String(rawPhone).replace(/[^0-9]/g, '');
+    if (cleanPhone.startsWith('01') && cleanPhone.length === 11) {
+      cleanPhone = '2' + cleanPhone;
+    }
+
     setSending(true);
     setStatus(null);
 
     try {
-      await addDoc(collection(db, 'whatsappQueue'), {
-        phone,
-        clientName: selectedClient.fullName || 'متدرب',
-        message: messageText.trim(),
-        type: 'coach_quick_reply',
-        status: 'pending',
-        createdAt: serverTimestamp()
+      const res = await sendWhatsAppNotificationFn({
+        traineeId: selectedClient.id,
+        traineeName: selectedClient.fullName || 'متدرب',
+        phone: cleanPhone,
+        messageType: 'custom',
+        customBody: messageText.trim(),
       });
 
-      setStatus({ type: 'success', text: `تم الإرسال لـ ${selectedClient.fullName} عبر واتساب بنجاح! ✅` });
+      setStatus({ type: 'success', text: res.message });
       setMessageText('');
-    } catch {
-      setStatus({ type: 'error', text: 'حدث خطأ أثناء الإرسال، تأكد من الاتصال بالإنترنت.' });
+    } catch (err: any) {
+      setStatus({ type: 'error', text: err?.message || 'حدث خطأ أثناء الإرسال، تأكد من الاتصال.' });
     } finally {
       setSending(false);
     }
@@ -225,7 +229,7 @@ export const QuickReplies: React.FC<{ clients?: TraineeProfile[] }> = ({ clients
           <Zap className="w-5 h-5 text-[#39FF14]" />
           <span>ردود جاهزة وإرسال واتساب مباشر (106 رد)</span>
         </h2>
-        <span className="text-xs text-[#929B95]">استبدال تلقائي لاسم المتدرب</span>
+        <span className="text-xs text-[#929B95]">يرسل عبر رقمك المربوط بالمنصة تلقائياً</span>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
