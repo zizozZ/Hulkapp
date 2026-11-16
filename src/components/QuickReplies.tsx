@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { Send, Search, Zap } from 'lucide-react';
+import { db } from '../config/firebase';
+import { useAuth } from '../context/AuthContext';
 import { TraineeProfile } from '../types';
-import { sendWhatsAppNotificationFn } from '../services/functionsService';
 
 const REPLY_CATEGORIES: Record<string, { label: string; templates: string[] }> = {
   motivation: {
@@ -153,6 +155,7 @@ const REPLY_CATEGORIES: Record<string, { label: string; templates: string[] }> =
 };
 
 export const QuickReplies: React.FC<{ clients?: TraineeProfile[] }> = ({ clients = [] }) => {
+  const { profile } = useAuth();
   const [selectedClientId, setSelectedClientId] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('motivation');
   const [searchQuery, setSearchQuery] = useState('');
@@ -179,6 +182,10 @@ export const QuickReplies: React.FC<{ clients?: TraineeProfile[] }> = ({ clients
   };
 
   const handleSendWhatsApp = async () => {
+    if (!profile?.id) {
+      setStatus({ type: 'error', text: 'يرجى تسجيل الدخول أولاً!' });
+      return;
+    }
     const rawPhone = (selectedClient as any)?.phone || (selectedClient as any)?.whatsapp || '';
     if (!selectedClient || !rawPhone) {
       setStatus({ type: 'error', text: 'يرجى اختيار متدرب مسجل برقم واتساب صحيح!' });
@@ -189,7 +196,6 @@ export const QuickReplies: React.FC<{ clients?: TraineeProfile[] }> = ({ clients
       return;
     }
 
-    // تنسيق الرقم المصري تلقائياً (مثلاً 010... يتحول إلى 2010...)
     let cleanPhone = String(rawPhone).replace(/[^0-9]/g, '');
     if (cleanPhone.startsWith('01') && cleanPhone.length === 11) {
       cleanPhone = '2' + cleanPhone;
@@ -199,18 +205,24 @@ export const QuickReplies: React.FC<{ clients?: TraineeProfile[] }> = ({ clients
     setStatus(null);
 
     try {
-      const res = await sendWhatsAppNotificationFn({
+      await addDoc(collection(db, 'whatsappQueue'), {
+        trainerId: (selectedClient as any)?.trainerId || profile.id,
         traineeId: selectedClient.id,
         traineeName: selectedClient.fullName || 'متدرب',
-        phone: cleanPhone,
-        messageType: 'custom',
-        customBody: messageText.trim(),
+        toPhone: cleanPhone,
+        text: messageText.trim(),
+        isAutomated: false,
+        status: 'pending',
+        createdAt: serverTimestamp(),
       });
 
-      setStatus({ type: 'success', text: res.message });
+      setStatus({
+        type: 'success',
+        text: `تمت إضافة الرسالة لـ ${selectedClient.fullName} في طابور الإرسال الآمن بنجاح! ✅`,
+      });
       setMessageText('');
     } catch (err: any) {
-      setStatus({ type: 'error', text: err?.message || 'حدث خطأ أثناء الإرسال، تأكد من الاتصال.' });
+      setStatus({ type: 'error', text: err?.message || 'حدث خطأ أثناء الإضافة للطابور.' });
     } finally {
       setSending(false);
     }
@@ -229,7 +241,7 @@ export const QuickReplies: React.FC<{ clients?: TraineeProfile[] }> = ({ clients
           <Zap className="w-5 h-5 text-[#39FF14]" />
           <span>ردود جاهزة وإرسال واتساب مباشر (106 رد)</span>
         </h2>
-        <span className="text-xs text-[#929B95]">يرسل عبر رقمك المربوط بالمنصة تلقائياً</span>
+        <span className="text-xs text-[#929B95]">يُضاف لطابور الإرسال الآمن تلقائياً</span>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -329,7 +341,7 @@ export const QuickReplies: React.FC<{ clients?: TraineeProfile[] }> = ({ clients
         className="w-full hulk-btn-primary py-3 text-sm font-black flex items-center justify-center gap-2 disabled:opacity-50"
       >
         <Send className="w-4 h-4" />
-        <span>{sending ? 'جاري الإرسال...' : 'إرسال عبر واتساب الآن'}</span>
+        <span>{sending ? 'جاري الإضافة للطابور...' : 'إرسال للطابور عبر واتساب الآن'}</span>
       </button>
     </div>
   );

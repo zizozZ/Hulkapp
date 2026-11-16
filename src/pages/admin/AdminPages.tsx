@@ -23,6 +23,7 @@ import {
 import { db } from '../../config/firebase';
 import { createManagedUserFn, setAccountStatusFn } from '../../services/functionsService';
 import { TraineeProfile, TrainerProfile } from '../../types';
+import { QuickReplies } from '../../components/QuickReplies';
 
 export const AdminDashboardPage: React.FC = () => {
   const [trainers, setTrainers] = useState<TrainerProfile[]>([]);
@@ -109,6 +110,9 @@ export const AdminDashboardPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Quick Replies WhatsApp Section */}
+      <QuickReplies clients={trainees} />
     </div>
   );
 };
