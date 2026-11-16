@@ -1,0 +1,14 @@
+{
+  "appId": "com.hulk.fitness.coaching",
+  "appName": "HULK",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "backgroundColor": "#090B0A",
+  "android": {
+    "allowMixedContent": true,
+    "backgroundColor": "#090B0A"
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}

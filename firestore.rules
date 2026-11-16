@@ -1,0 +1,211 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.role == 'admin' ||
+        userDoc().role == 'admin'
+      );
+    }
+
+    function isTrainer() {
+      return isSignedIn() && (
+        request.auth.token.role == 'trainer' ||
+        userDoc().role == 'trainer'
+      );
+    }
+
+    function isTrainee() {
+      return isSignedIn() && (
+        request.auth.token.role == 'trainee' ||
+        userDoc().role == 'trainee'
+      );
+    }
+
+    // 1. users collection (strict role protection; admins create trainers/trainees, trainers create own trainees)
+    match /users/{userId} {
+      allow read: if isSignedIn() && (
+        request.auth.uid == userId ||
+        isAdmin() ||
+        (isTrainer() && resource.data.trainerId == request.auth.uid)
+      );
+      allow create: if isSignedIn() && (
+        (isAdmin() && request.resource.data.role in ['trainer', 'trainee']) ||
+        (isTrainer() && request.resource.data.role == 'trainee' && request.resource.data.trainerId == request.auth.uid)
+      );
+      allow update: if isAdmin() ||
+        (isTrainer() && resource.data.trainerId == request.auth.uid && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])) ||
+        (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'status', 'trainerId']));
+      allow delete: if isAdmin() || (isTrainer() && resource.data.trainerId == request.auth.uid);
+    }
+
+    // 2. trainers collection
+    match /trainers/{trainerId} {
+      allow read: if isSignedIn() && (isAdmin() || request.auth.uid == trainerId || (isTrainee() && userDoc().trainerId == trainerId));
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (request.auth.uid == trainerId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status', 'maxClients']));
+    }
+
+    // 3. trainees collection
+    match /trainees/{traineeId} {
+      allow read: if isAdmin() ||
+        request.auth.uid == traineeId ||
+        (isTrainer() && resource.data.trainerId == request.auth.uid);
+      allow create: if isAdmin() || (isTrainer() && request.resource.data.trainerId == request.auth.uid);
+      allow update: if isAdmin() ||
+        (isTrainer() && resource.data.trainerId == request.auth.uid) ||
+        (request.auth.uid == traineeId &&
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['trainerId', 'status', 'subscriptionStatus', 'complianceLevel']));
+      allow delete: if isAdmin() || (isTrainer() && resource.data.trainerId == request.auth.uid);
+    }
+
+    // 4. exercises library
+    match /exercises/{exerciseId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() || isTrainer();
+    }
+
+    // 5. workoutTemplates
+    match /workoutTemplates/{templateId} {
+      allow read: if isAdmin() || (isTrainer() && (resource.data.trainerId == request.auth.uid || resource.data.isGlobal == true));
+      allow create: if isAdmin() || (isTrainer() && request.resource.data.trainerId == request.auth.uid);
+      allow update, delete: if isAdmin() || (isTrainer() && resource.data.trainerId == request.auth.uid);
+    }
+
+    // 6. workoutPlans
+    match /workoutPlans/{planId} {
+      allow read: if isAdmin() ||
+        (isTrainer() && resource.data.trainerId == request.auth.uid) ||
+        (isTrainee() && resource.data.traineeId == request.auth.uid);
+      allow create: if isAdmin() || (isTrainer() && request.resource.data.trainerId == request.auth.uid);
+      allow update, delete: if isAdmin() || (isTrainer() && resource.data.trainerId == request.auth.uid);
+    }
+
+    // 7. workoutDays
+    match /workoutDays/{dayId} {
+      allow read: if isAdmin() ||
+        (isTrainer() && resource.data.trainerId == request.auth.uid) ||
+        (isTrainee() && resource.data.traineeId == request.auth.uid);
+      allow write: if isAdmin() || isTrainer();
+    }
+
+    // 8. workoutLogs
+    match /workoutLogs/{docId} {
+      allow read: if isSignedIn() && (isAdmin() || isTrainer() || resource.data.traineeId == request.auth.uid);
+      allow create: if isSignedIn() && (isAdmin() || isTrainer() || request.resource.data.traineeId == request.auth.uid);
+      allow update, delete: if isSignedIn() && (isAdmin() || isTrainer() || resource.data.traineeId == request.auth.uid);
+    }
+
+    // 9. nutritionPlans
+    match /nutritionPlans/{planId} {
+      allow read: if isAdmin() ||
+        (isTrainer() && resource.data.trainerId == request.auth.uid) ||
+        (isTrainee() && resource.data.traineeId == request.auth.uid);
+      allow create: if isAdmin() || (isTrainer() && request.resource.data.trainerId == request.auth.uid);
+      allow update, delete: if isAdmin() || (isTrainer() && resource.data.trainerId == request.auth.uid);
+    }
+
+    // 10. foodLibrary
+    match /foodLibrary/{foodId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() || isTrainer();
+    }
+
+    // 11. foodLogs
+    match /foodLogs/{docId} {
+      allow read: if isSignedIn() && (isAdmin() || isTrainer() || resource.data.traineeId == request.auth.uid);
+      allow create: if isSignedIn() && (isAdmin() || isTrainer() || request.resource.data.traineeId == request.auth.uid);
+      allow update, delete: if isSignedIn() && (isAdmin() || isTrainer() || resource.data.traineeId == request.auth.uid);
+    }
+
+    // 12. bodyMeasurements
+    match /bodyMeasurements/{docId} {
+      allow read: if isSignedIn() && (isAdmin() || isTrainer() || resource.data.traineeId == request.auth.uid);
+      allow create: if isSignedIn() && (isAdmin() || isTrainer() || request.resource.data.traineeId == request.auth.uid);
+      allow update, delete: if isSignedIn() && (isAdmin() || isTrainer() || resource.data.traineeId == request.auth.uid);
+    }
+
+    // 13. progressPhotos (strictly private to trainee & assigned trainer)
+    match /progressPhotos/{docId} {
+      allow read: if isSignedIn() && (isAdmin() || isTrainer() || resource.data.traineeId == request.auth.uid);
+      allow create: if isSignedIn() && (isAdmin() || isTrainer() || request.resource.data.traineeId == request.auth.uid);
+      allow update, delete: if isSignedIn() && (isAdmin() || isTrainer() || resource.data.traineeId == request.auth.uid);
+    }
+
+    // 14. conversations & 15. messages
+    match /conversations/{convId} {
+      allow read: if isSignedIn() && (
+        isAdmin() ||
+        resource.data.trainerId == request.auth.uid ||
+        resource.data.traineeId == request.auth.uid
+      );
+      allow create: if isSignedIn() && (
+        isAdmin() ||
+        request.resource.data.trainerId == request.auth.uid ||
+        request.resource.data.traineeId == request.auth.uid
+      );
+      allow update: if isSignedIn() && (
+        isAdmin() ||
+        resource.data.trainerId == request.auth.uid ||
+        resource.data.traineeId == request.auth.uid
+      );
+    }
+
+    match /messages/{msgId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.senderId == request.auth.uid;
+      allow update: if isSignedIn();
+    }
+
+    // 16. notifications
+    match /whatsappSessions/{trainerId} {
+      allow read, write: if isSignedIn() && (isAdmin() || request.auth.uid == trainerId);
+    }
+
+    match /whatsappQueue/{msgId} {
+      allow read: if isSignedIn() && (isAdmin() || isTrainer());
+      allow create: if isSignedIn() && (
+        isAdmin() ||
+        isTrainer() ||
+        request.resource.data.traineeId == request.auth.uid
+      );
+      allow update, delete: if isSignedIn() && (isAdmin() || isTrainer());
+    }
+
+    match /notifications/{notifId} {
+      allow read, update: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn();
+      allow delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // 17. subscriptions
+    match /subscriptions/{subId} {
+      allow read: if isAdmin() ||
+        (isTrainer() && resource.data.trainerId == request.auth.uid) ||
+        (isTrainee() && resource.data.traineeId == request.auth.uid);
+      allow create, update, delete: if isAdmin() || (isTrainer() && request.resource.data.trainerId == request.auth.uid);
+    }
+
+    // 18. activityLogs
+    match /activityLogs/{logId} {
+      allow read: if isAdmin() || (isTrainer() && resource.data.actorId == request.auth.uid);
+      allow create: if isSignedIn();
+      allow update, delete: if false;
+    }
+
+    // 19. appSettings
+    match /appSettings/{settingId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}

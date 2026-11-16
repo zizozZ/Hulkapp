@@ -1,0 +1,144 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    background-color: #090B0A;
+    color: #F5F7F5;
+    font-family: 'Cairo', 'Tajawal', sans-serif;
+    overflow-x: hidden;
+  }
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #111713;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #29352D;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #39FF14;
+  }
+}
+
+@keyframes pageFadeSlideIn {
+  0% { opacity: 0; transform: translateY(14px) scale(0.992); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes cardPopIn {
+  0% { opacity: 0; transform: translateY(16px) scale(0.98); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes bubblePopIn {
+  0% { opacity: 0; transform: translateY(10px) scale(0.94); }
+  70% { transform: translateY(-2px) scale(1.01); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes modalScaleIn {
+  0% { opacity: 0; transform: scale(0.94) translateY(12px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes slideInRight {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(0); }
+}
+
+.animate-page-enter {
+  animation: pageFadeSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-card-in {
+  animation: cardPopIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-bubble-in {
+  animation: bubblePopIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-modal-in {
+  animation: modalScaleIn 0.26s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-drawer-in {
+  animation: slideInRight 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.hulk-card {
+  background-color: #1C2420;
+  border: 1px solid #29352D;
+  border-radius: 1rem;
+  transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.24s ease,
+              box-shadow 0.24s ease;
+}
+
+.hulk-card:hover {
+  border-color: rgba(57, 255, 20, 0.38);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.35), 0 0 20px rgba(57, 255, 20, 0.12);
+}
+
+.hulk-btn-primary {
+  background-color: #39FF14;
+  color: #090B0A;
+  font-weight: 800;
+  border-radius: 0.75rem;
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+              background-color 0.2s ease,
+              box-shadow 0.2s ease;
+}
+
+.hulk-btn-primary:hover:not(:disabled) {
+  background-color: #32e610;
+  box-shadow: 0 0 24px rgba(57, 255, 20, 0.42);
+  transform: translateY(-1px);
+}
+
+.hulk-btn-primary:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.hulk-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hulk-input {
+  background-color: #111713;
+  border: 1px solid #29352D;
+  color: #F5F7F5;
+  border-radius: 0.75rem;
+  padding: 0.65rem 0.9rem;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hulk-input:focus {
+  border-color: #39FF14;
+  box-shadow: 0 0 0 2px rgba(57, 255, 20, 0.16);
+}
+
+/* Native App Feel - Hide Web Browser Behavior */
+html, body {
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  user-select: none;
+  background-color: #090B0A;
+}
+input, textarea, select {
+  user-select: text;
+}
+::-webkit-scrollbar {
+  display: none;
+}
