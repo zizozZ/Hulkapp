@@ -208,10 +208,10 @@ export const TrainerDashboard: React.FC = () => {
             </ResponsiveContainer>
           </div>
         </div>
+      </div>
 
       {/* Quick Replies WhatsApp Section */}
       <QuickReplies clients={trainees} />
-      </div>
     </div>
   );
 };
